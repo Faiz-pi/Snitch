@@ -1,4 +1,4 @@
-import { body } from "express-validator";   
+import { body, validationResult } from "express-validator";   
 
 
 
@@ -20,7 +20,7 @@ export const createProductValidator =[
         .isString().withMessage("Title must be a string").bail()
         .trim()
         .isLength({ min:2, max:100 }).withMessage("Title must be minimum 2 characters long").bail()
-        .isAlpha("en-US", { ignore: ' ' }).withMessage("Title can only have english small case and capital case letter"),
+        .isAlpha("en-US", { ignore: " -" }).withMessage("Title can only have english small case and capital case letter"),
     body("description")
         .exists().withMessage("description is required").bail()
         .isString().withMessage("description must be a string").bail()
@@ -36,10 +36,23 @@ export const createProductValidator =[
     body("sizes")
         .exists().withMessage("Sizes is required").bail()
         .isArray({ min:1}).withMessage("Sizes must be an array with at least one size").bail(),
-    body("sizes.size")
-        .exists().withMessage("Sizes is required").bail()
+    body("sizes.*.size")
+        .exists().withMessage("Sizes must be present in every entry of sizes array").bail()
+        .isString().withMessage("size must be a string value")
+        .trim()
         .isIn(["XS","S","M","L","XL","XXL"]).withMessage("Size must be one of XS, S, M, L, XL, XXL"),
-    body("sizes.stock")
+    body("sizes.*.stock")
         .exists().withMessage("Stock is required").bail()
-        .isInt({ min:0 }).withMessage("Stock must be an integer greater than or equal to 0")
+        .isInt({ min:0 }).withMessage("Stock must be an integer greater than or equal to 0").bail(),
+    (req, res, next)=>{
+        const errors = validationResult(req);
+
+        if(!errors.isEmpty()){
+            return res.status(400).json({
+                message: "Invalid request",
+                errors: errors.array()
+            })
+        }
+        next()
+    }
 ]
